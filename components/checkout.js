@@ -1,6 +1,15 @@
 import React, {Component} from 'react';
-import {View, ScrollView, Text, TextInput, PickerIOS, Button, Modal} from 'react-native';
+import {
+    View, 
+    ScrollView, 
+    Text, 
+    TextInput, 
+    PickerIOS, 
+    Button, 
+    Modal,
+    AlertIOS } from 'react-native';
 import USStates from '../support/USStates.js';
+import StripeAPI from '../support/stripeAPI.js';
 
 const PickerItemIOS = PickerIOS.Item;
 
@@ -9,14 +18,20 @@ export default class Checkout extends Component {
 	constructor(){
 		super();
 		this.state = {
-			name: "",
-			street: "",
-			city: "",
-			usState: "",
-			country: "",
-			cc_number: "",
-			cc_cvc: "",
-			cc_exp: "",
+      card: {
+  			name: "",
+  			street: "",
+  			city: "",
+  			usState: "",
+  			country: "",
+  			cc_number: "",
+  			cc_cvc: "",
+  			cc_exp_month: "",
+        cc_exp_year: ""
+      },
+      token: {
+        tokenId: ""
+      },
 			modalOpen: false
 		}
 		
@@ -24,7 +39,13 @@ export default class Checkout extends Component {
 	}
 	
 	submitPurchase(){
-		this.setState({modalOpen: true})
+    var stripe = new StripeAPI;
+    stripe.token(this.state.card).then((res) => {
+      this.setState({modalOpen: true, token: res})        
+    }).catch((err) => {
+      return AlertIOS.alert("Card Error", err.message);
+    });
+    
 	}
 	
 	closeModal(){
@@ -33,13 +54,13 @@ export default class Checkout extends Component {
 	
 	render(){
 		return(
-			<ScrollView contentContainerStyle={{paddingTop: 100, alignItems: 'stretch', justifyContent: 'flex-start'}}>
-				<MnTextField label="Name:" onChangeText={(text) => this.setState({name: text})} value={this.state.name} />
-				<MnTextField label="Street:" onChangeText={(text) => this.setState({street: text})} value={this.state.street} />
-				<MnTextField label="City:" onChangeText={(text) => this.setState({city: text})} value={this.state.city} />
+			<ScrollView contentContainerStyle={{paddingTop: 15, alignItems: 'stretch', justifyContent: 'flex-start'}}>
+				<MnTextField label="Name:" onChangeText={(text) => this.setState({card: {...this.state.card, name: text}})} value={this.state.card.name} />
+				<MnTextField label="Street:" onChangeText={(text) => this.setState({card: {...this.state.card, street: text}})} value={this.state.card.street} />
+				<MnTextField label="City:" onChangeText={(text) => this.setState({card: {...this.state.card, city: text}})} value={this.state.card.city} />
 				<PickerIOS 
-					selectedValue={this.state.usState}
-					onValueChange={(usState) => this.setState({usState: usState})}
+					selectedValue={this.state.card.usState}
+					onValueChange={(usState) => this.setState({card: {...this.state.card, usState: usState}})}
 				>
 					{ USStates.map((usState) => {
 						return <PickerItemIOS 
@@ -49,25 +70,23 @@ export default class Checkout extends Component {
 							/>
 					})}
 				</PickerIOS>
-				<MnTextField label="Country:" onChangeText={(text) => this.setState({country: text})} value={this.state.country} />
-				<MnTextField label="Credit Card Number:" onChangeText={(text) => this.setState({cc_number: text})} value={this.state.cc_number} />
-				<MnTextField label="Credit Card Security Code:" onChangeText={(text) => this.setState({cc_cvc: text})} value={this.state.cc_cvc} />
-				<MnTextField label="Credit Card Expiry:" onChangeText={(text) => this.setState({cc_exp: text})} value={this.state.cc_exp} />
+
+				<MnTextField label="Country:" onChangeText={(text) => this.setState({card: {...this.state.card, country: text}})} value={this.state.card.country} />
+				<MnTextField label="Credit Card Number:" onChangeText={(text) => this.setState({card: {...this.state.card, cc_number: text}})} value={this.state.card.cc_number} />
+				<MnTextField label="Credit Card Security Code:" onChangeText={(text) => this.setState({card: {...this.state.card, cc_cvc: text}})} value={this.state.card.cc_cvc} />
+				<MnTextField label="Credit Card Expiry Month:" onChangeText={(text) => this.setState({card: {...this.state.card, cc_exp_month: text}})} value={this.state.card.cc_exp_month} />
+				<MnTextField label="Credit Card Expiry Year:" onChangeText={(text) => this.setState({card: {...this.state.card, cc_exp_year: text}})} value={this.state.card.cc_exp_year} />
 				<Button title="Purchase" color="#46A8B9" onPress={this.submitPurchase.bind(this)}/>
+
 					<Modal 
-						animiationType='slide' 
+						animationType='slide'
 						transparent={false} 
 						visible={this.state.modalOpen} 
 						>
+            <View style={{paddingTop: 50}}>
 						<Text>Payment Details</Text>
-						<Text>Name: </Text>
-						<Text>Street: </Text>
-						<Text>City: </Text>
-						<Text>State: </Text>
-						<Text>Country: </Text>
-						<Text>Credit Card Number: </Text>
-						<Text>Credit Card CVC: </Text>
-						<Text>Credit Card EXP: </Text>
+            <Text>{this.state.token.tokenId}</Text>
+            </View>
 						<Button title="close" onPress={this.closeModal.bind(this)} />
 					</Modal>
 			</ScrollView>
@@ -75,9 +94,10 @@ export default class Checkout extends Component {
 	}
 }
 
+// Quick inline abstraction until I decide if I'm using a form/component lib
 class MnTextField extends Component {
 	render(){
-		return(
+		return (
 			<View style={{marginBottom: 50}}>
 			<Text>{this.props.label}</Text>
 			<View style={{borderBottomColor: 'black', borderBottomWidth: 1}}>
